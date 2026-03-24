@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TrendScore – Live Scores</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:     #0e1117;
+  --card:   #161b24;
+  --card2:  #1c2330;
+  --border: #252e3d;
+  --brd2:   #2e3a4e;
+  --green:  #00e676;
+  --red:    #ff4757;
+  --blue:   #2979ff;
+  --gold:   #ffd740;
+  --text:   #f0f4f8;
+  --sub:    #7a8fa6;
+  --dim:    #3d4f61;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;cursor:none;}
+
+/* CURSOR */
+#cur{width:10px;height:10px;background:var(--green);border-radius:50%;position:fixed;pointer-events:none;z-index:9999;box-shadow:0 0 10px var(--green);transition:transform .1s,background .15s;}
+#cur-r{width:30px;height:30px;border:1.5px solid rgba(0,230,118,.4);border-radius:50%;position:fixed;pointer-events:none;z-index:9998;transition:all .12s ease;}
+.ripple{position:fixed;border-radius:50%;border:1px solid var(--green);pointer-events:none;z-index:9997;animation:ripOut .5s ease-out forwards;}
+@keyframes ripOut{0%{width:8px;height:8px;opacity:.8;transform:translate(-50%,-50%)}100%{width:50px;height:50px;opacity:0;transform:translate(-50%,-50%)}}
+
+/* HEADER */
+header{
+  height:60px;background:rgba(14,17,23,.97);backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;
+  display:flex;align-items:center;padding:0 1.5rem;gap:2rem;
+}
+.logo{font-size:1.2rem;font-weight:800;color:var(--text);text-decoration:none;cursor:none;display:flex;align-items:center;gap:8px;}
+.logo-dot{width:10px;height:10px;background:var(--green);border-radius:50%;box-shadow:0 0 8px var(--green);animation:pls 2s infinite;}
+@keyframes pls{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.65)}}
+.logo span{color:var(--green);}
+nav{display:flex;gap:2px;}
+nav a{font-size:.78rem;font-weight:500;color:var(--sub);text-decoration:none;padding:5px 13px;border-radius:8px;transition:all .2s;cursor:none;}
+nav a:hover,nav a.active{color:var(--text);background:var(--card2);}
+.hdr-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.live-pill{display:flex;align-items:center;gap:6px;background:rgba(0,230,118,.08);border:1px solid rgba(0,230,118,.22);border-radius:20px;padding:5px 13px;font-size:.72rem;font-weight:600;color:var(--green);}
+.live-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pls 1s infinite;}
+.hdr-stat{font-size:.76rem;color:var(--sub);}
+.hdr-stat b{color:var(--text);}
+
+/* TICKER */
+.ticker-bar{height:32px;background:var(--card);border-bottom:1px solid var(--border);overflow:hidden;display:flex;align-items:center;position:relative;z-index:3;}
+.ticker-bar::before{content:'';position:absolute;left:0;top:0;bottom:0;width:50px;background:linear-gradient(90deg,var(--card),transparent);z-index:1;}
+.ticker-bar::after{content:'';position:absolute;right:0;top:0;bottom:0;width:50px;background:linear-gradient(-90deg,var(--card),transparent);z-index:1;}
+.ticker-scroll{display:flex;white-space:nowrap;animation:scrollT 55s linear infinite;}
+@keyframes scrollT{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+.ti{font-size:.7rem;font-weight:500;padding:0 1.8rem;display:flex;align-items:center;gap:7px;}
+.ti-team{color:var(--sub);}
+.ti-score{color:var(--text);font-weight:700;}
+.ti-live{color:var(--green);}
+.ti-ft{color:var(--dim);}
+.ti-sep{color:var(--border);}
+
+/* PAGE LAYOUT */
+.page{max-width:1280px;margin:0 auto;padding:1.2rem 1.5rem;display:grid;grid-template-columns:220px 1fr 300px;gap:1.2rem;}
+
+/* ── LEFT: LEAGUE SELECTOR ── */
+.league-sidebar{display:flex;flex-direction:column;gap:4px;}
+.league-sidebar-title{font-size:.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);padding:4px 10px 8px;margin-bottom:2px;}
+
+.lg-btn{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 12px;border-radius:8px;
+  border:1px solid transparent;
+  cursor:none;transition:all .2s;
+  background:transparent;
+  position:relative;
+}
+.lg-btn:hover{background:var(--card2);border-color:var(--border);}
+.lg-btn.active{background:var(--card2);border-color:var(--brd2);}
+.lg-btn.active::before{content:'';position:absolute;left:0;top:4px;bottom:4px;width:3px;background:var(--green);border-radius:0 3px 3px 0;}
+
+.lg-flag{font-size:1rem;width:22px;text-align:center;flex-shrink:0;}
+.lg-info{flex:1;min-width:0;}
+.lg-code{font-size:.65rem;font-weight:700;letter-spacing:.8px;color:var(--text);display:block;}
+.lg-name{font-size:.62rem;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;margin-top:1px;}
+.lg-cnt{
+  font-size:.6rem;font-weight:700;min-width:18px;text-align:center;
+  background:var(--card);border:1px solid var(--border);
+  border-radius:5px;padding:1px 5px;color:var(--sub);
+}
+.lg-cnt.has-live{background:rgba(0,230,118,.1);border-color:rgba(0,230,118,.25);color:var(--green);}
+
+/* ── CENTER: MATCHES ── */
+.matches-col{min-width:0;}
+.league-panel{display:none;}
+.league-panel.active{display:block;}
+
+.league-block{border-radius:10px;overflow:hidden;border:1px solid var(--border);margin-bottom:1rem;}
+.league-head{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 14px;background:var(--card2);border-bottom:1px solid var(--border);
+}
+.lh-flag{font-size:1.1rem;}
+.lh-name{font-size:.82rem;font-weight:700;color:var(--text);}
+.lh-badge{font-size:.62rem;font-weight:600;letter-spacing:.8px;background:rgba(41,121,255,.12);color:#6ea8fe;border:1px solid rgba(41,121,255,.2);border-radius:4px;padding:2px 7px;}
+.lh-live{margin-left:auto;font-size:.68rem;font-weight:600;color:var(--green);display:flex;align-items:center;gap:5px;}
+
+/* MATCH ROW */
+.match-row{
+  background:var(--card);border-bottom:1px solid var(--border);
+  padding:11px 14px;
+  display:grid;grid-template-columns:58px 1fr auto 1fr 110px;
+  align-items:center;
+  cursor:none;transition:background .18s;position:relative;
+}
+.match-row:last-child{border-bottom:none;}
+.match-row::after{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:transparent;transition:background .2s;}
+.match-row:hover{background:var(--card2);}
+.match-row:hover::after{background:var(--blue);}
+.match-row.is-live:hover::after{background:var(--green);}
+.match-row.is-hot{animation:hotP 2.5s ease-in-out infinite;}
+.match-row.is-hot:hover::after{background:var(--red);}
+@keyframes hotP{0%,100%{box-shadow:none}50%{box-shadow:inset 2px 0 18px rgba(255,71,87,.05)}}
+
+/* Time */
+.m-time{text-align:center;}
+.mt-min{font-size:.68rem;font-weight:700;font-family:'DM Mono',monospace;color:var(--green);}
+.mt-min.ft{color:var(--dim);}
+.mt-min.sched{color:var(--sub);}
+.mt-dot{width:5px;height:5px;background:var(--green);border-radius:50%;margin:3px auto 0;animation:pls 1s infinite;}
+.mt-status{font-size:.58rem;color:var(--dim);margin-top:1px;}
+.mt-ht{font-size:.58rem;background:rgba(255,215,64,.1);color:var(--gold);border:1px solid rgba(255,215,64,.2);border-radius:3px;padding:1px 5px;display:inline-block;margin-top:2px;}
+
+/* Teams */
+.m-team{display:flex;align-items:center;gap:9px;}
+.m-team.away{flex-direction:row-reverse;text-align:right;}
+.tlogo{width:30px;height:30px;border-radius:5px;object-fit:contain;background:var(--card2);border:1px solid var(--brd2);padding:2px;flex-shrink:0;}
+.tlogo-fb{width:30px;height:30px;border-radius:5px;background:var(--card2);border:1px solid var(--brd2);display:flex;align-items:center;justify-content:center;font-size:.55rem;font-weight:700;color:var(--sub);font-family:'DM Mono',monospace;flex-shrink:0;}
+.tname{font-size:.85rem;font-weight:600;color:var(--text);}
+.tname.winning{color:var(--green);}
+
+/* Score */
+.m-score{display:flex;align-items:center;justify-content:center;gap:9px;padding:0 10px;}
+.sc{font-size:1.5rem;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;line-height:1;}
+.sc.live{color:var(--green);}
+.sc-sep{font-size:.85rem;color:var(--dim);}
+.vs-txt{font-size:.72rem;font-weight:600;color:var(--dim);}
+@keyframes scPop{0%{color:var(--gold);transform:scale(1.3)}100%{color:var(--green);transform:scale(1)}}
+.sc-pop{animation:scPop .9s ease-out;}
+
+/* Meta */
+.m-meta{display:flex;flex-direction:column;align-items:flex-end;gap:5px;padding-left:6px;}
+.stag{font-size:.6rem;font-weight:700;letter-spacing:.4px;border-radius:6px;padding:3px 8px;display:inline-flex;align-items:center;gap:4px;}
+.st-hot{background:rgba(255,71,87,.1);color:var(--red);border:1px solid rgba(255,71,87,.22);}
+.st-tense{background:rgba(255,215,64,.08);color:var(--gold);border:1px solid rgba(255,215,64,.18);}
+.st-calm{background:rgba(0,230,118,.07);color:var(--green);border:1px solid rgba(0,230,118,.18);}
+.st-sched{background:transparent;color:var(--dim);border:1px solid var(--border);}
+.st-end{background:transparent;color:var(--dim);border:1px solid var(--border);}
+.mom-bar{width:86px;height:3px;background:var(--brd2);border-radius:2px;overflow:hidden;}
+.mom-fill{height:100%;border-radius:2px;transition:width .9s ease;}
+.mom-home{background:linear-gradient(90deg,var(--blue),#64b5f6);}
+.mom-hot{background:linear-gradient(90deg,var(--red),#ff8a80);}
+.mom-sub{font-size:.58rem;color:var(--dim);font-family:'DM Mono',monospace;}
+
+/* EMPTY STATE */
+.empty-state{
+  padding:3rem 2rem;text-align:center;
+  background:var(--card);border-radius:10px;border:1px solid var(--border);
+}
+.empty-icon{font-size:2.5rem;margin-bottom:.8rem;}
+.empty-title{font-size:.9rem;font-weight:600;color:var(--sub);margin-bottom:.3rem;}
+.empty-sub{font-size:.75rem;color:var(--dim);}
+
+/* ── RIGHT: SIDEBAR ── */
+.right-sidebar{display:flex;flex-direction:column;gap:1rem;}
+.widget{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.w-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);}
+.w-title{font-size:.76rem;font-weight:700;color:var(--text);}
+.w-link{font-size:.7rem;color:var(--sub);text-decoration:none;cursor:none;transition:color .2s;}
+.w-link:hover{color:var(--blue);}
+
+/* Terminal */
+.term{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.term-head{padding:8px 12px;background:var(--card2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;}
+.td{width:7px;height:7px;border-radius:50%;}
+.term-lbl{font-size:.62rem;font-weight:600;color:var(--sub);letter-spacing:1px;text-transform:uppercase;margin-left:4px;}
+.term-body{padding:10px 12px;max-height:250px;overflow-y:auto;display:flex;flex-direction:column;gap:5px;}
+.term-body::-webkit-scrollbar{width:3px;}
+.term-body::-webkit-scrollbar-thumb{background:var(--brd2);}
+.t-row{display:flex;align-items:flex-start;gap:7px;font-size:.66rem;}
+.t-min{color:var(--dim);font-family:'DM Mono',monospace;flex-shrink:0;min-width:26px;}
+.t-badge{border-radius:4px;padding:1px 5px;font-weight:700;font-size:.58rem;flex-shrink:0;letter-spacing:.5px;}
+.tb-goal{background:rgba(0,230,118,.1);color:var(--green);}
+.tb-card{background:rgba(255,215,64,.08);color:var(--gold);}
+.tb-sub{background:rgba(41,121,255,.1);color:#6ea8fe;}
+.tb-pen{background:rgba(255,71,87,.1);color:var(--red);}
+.t-txt{color:var(--sub);line-height:1.4;}
+
+/* Standings */
+.stbl{width:100%;border-collapse:collapse;}
+.stbl th{font-size:.6rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--dim);padding:7px 14px;text-align:left;border-bottom:1px solid var(--border);}
+.stbl th:not(:nth-child(2)){text-align:center;}
+.stbl td{padding:7px 14px;border-bottom:1px solid rgba(37,46,61,.4);font-size:.78rem;cursor:none;transition:background .15s;}
+.stbl tr:last-child td{border-bottom:none;}
+.stbl tr:hover td{background:rgba(41,121,255,.04);}
+.stbl td:not(:nth-child(2)){text-align:center;color:var(--sub);}
+.pos{font-family:'DM Mono',monospace;font-size:.7rem;color:var(--dim);}
+.pos.cl{color:var(--blue)!important;font-weight:700;}
+.pos.rl{color:var(--red)!important;}
+.pts{color:var(--text)!important;font-weight:700!important;}
+.st-team-cell{display:flex;align-items:center;gap:7px;}
+.st-team-cell img{width:17px;height:17px;object-fit:contain;}
+.st-tname{font-size:.78rem;font-weight:600;color:var(--text);}
+
+/* TOAST */
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--card2);border:1px solid rgba(0,230,118,.28);border-radius:10px;padding:10px 15px;font-size:.76rem;font-weight:500;color:var(--text);z-index:9000;box-shadow:0 8px 32px rgba(0,0,0,.4);transform:translateX(120%);transition:transform .35s cubic-bezier(.34,1.56,.64,1);display:flex;align-items:center;gap:8px;max-width:270px;}
+.toast.show{transform:translateX(0);}
+
+@media(max-width:1100px){.page{grid-template-columns:180px 1fr}.right-sidebar{display:none}}
+@media(max-width:700px){.page{grid-template-columns:1fr}.league-sidebar{display:flex;flex-direction:row;flex-wrap:wrap;gap:6px}.lg-btn{padding:6px 10px}.lg-name{display:none}}
+</style>
+</head>
+<body>
+<div id="cur"></div>
+<div id="cur-r"></div>
+<div class="toast" id="toast"><span id="t-ico">⚽</span><span id="t-msg"></span></div>
+
+<!-- HEADER -->
+<header>
+  <a href="#" class="logo"><div class="logo-dot"></div>Trend<span>Score</span></a>
+  <nav>
+    <a href="#" class="active">Live</a>
+    <a href="#">Fixtures</a>
+    <a href="#">Results</a>
+    <a href="#">Tables</a>
+  </nav>
+  <div class="hdr-right">
+    <span class="hdr-stat">Goals: <b id="hdr-goals">54</b></span>
+    <div class="live-pill"><div class="live-dot"></div>LIVE <span id="hdr-live">7</span></div>
+  </div>
+</header>
+
+<!-- TICKER -->
+<div class="ticker-bar">
+  <div class="ticker-scroll" id="ticker"></div>
+</div>
+
+<div class="page">
+
+  <!-- ── LEFT: LEAGUE BUTTONS ── -->
+  <div class="league-sidebar">
+    <div class="league-sidebar-title">Competitions</div>
+
+    <div class="lg-btn active" data-panel="ALL">
+      <span class="lg-flag">🌍</span>
+      <div class="lg-info"><span class="lg-code">ALL</span><span class="lg-name">All Leagues</span></div>
+      <span class="lg-cnt has-live" id="cnt-ALL">12</span>
+    </div>
+    <div class="lg-btn" data-panel="WC">
+      <span class="lg-flag">🌍</span>
+      <div class="lg-info"><span class="lg-code">WC</span><span class="lg-name">FIFA World Cup</span></div>
+      <span class="lg-cnt" id="cnt-WC">0</span>
+    </div>
+    <div class="lg-btn" data-panel="CL">
+      <span class="lg-flag">🇪🇺</span>
+      <div class="lg-info"><span class="lg-code">CL</span><span class="lg-name">Champions League</span></div>
+      <span class="lg-cnt has-live" id="cnt-CL">3</span>
+    </div>
+    <div class="lg-btn" data-panel="BL1">
+      <span class="lg-flag">🇩🇪</span>
+      <div class="lg-info"><span class="lg-code">BL1</span><span class="lg-name">Bundesliga</span></div>
+      <span class="lg-cnt has-live" id="cnt-BL1">2</span>
+    </div>
+    <div class="lg-btn" data-panel="DED">
+      <span class="lg-flag">🇳🇱</span>
+      <div class="lg-info"><span class="lg-code">DED</span><span class="lg-name">Eredivisie</span></div>
+      <span class="lg-cnt" id="cnt-DED">1</span>
+    </div>
+    <div class="lg-btn" data-panel="BSA">
+      <span class="lg-flag">🇧🇷</span>
+      <div class="lg-info"><span class="lg-code">BSA</span><span class="lg-name">Brasileirão</span></div>
+      <span class="lg-cnt" id="cnt-BSA">1</span>
+    </div>
+    <div class="lg-btn" data-panel="PD">
+      <span class="lg-flag">🇪🇸</span>
+      <div class="lg-info"><span class="lg-code">PD</span><span class="lg-name">La Liga</span></div>
+      <span class="lg-cnt has-live" id="cnt-PD">2</span>
+    </div>
+    <div class="lg-btn" data-panel="FL1">
+      <span class="lg-flag">🇫🇷</span>
+      <div class="lg-info"><span class="lg-code">FL1</span><span class="lg-name">Ligue 1</span></div>
+      <span class="lg-cnt" id="cnt-FL1">1</span>
+    </div>
+    <div class="lg-btn" data-panel="ELC">
+      <span class="lg-flag">🏴󠁧󠁢󠁥󠁮󠁧󠁿</span>
+      <div class="lg-info"><span class="lg-code">ELC</span><span class="lg-name">Championship</span></div>
+      <span class="lg-cnt" id="cnt-ELC">1</span>
+    </div>
+    <div class="lg-btn" data-panel="PPL">
+      <span class="lg-flag">🇵🇹</span>
+      <div class="lg-info"><span class="lg-code">PPL</span><span class="lg-name">Primeira Liga</span></div>
+      <span class="lg-cnt" id="cnt-PPL">1</span>
+    </div>
+    <div class="lg-btn" data-panel="EC">
+      <span class="lg-flag">🇪🇺</span>
+      <div class="lg-info"><span class="lg-code">EC</span><span class="lg-name">Euro Championship</span></div>
+      <span class="lg-cnt" id="cnt-EC">0</span>
+    </div>
+    <div class="lg-btn" data-panel="SA">
+      <span class="lg-flag">🇮🇹</span>
+      <div class="lg-info"><span class="lg-code">SA</span><span class="lg-name">Serie A</span></div>
+      <span class="lg-cnt has-live" id="cnt-SA">1</span>
+    </div>
+    <div class="lg-btn" data-panel="PL">
+      <span class="lg-flag">🏴󠁧󠁢󠁥󠁮󠁧󠁿</span>
+      <div class="lg-info"><span class="lg-code">PL</span><span class="lg-name">Premier League</span></div>
+      <span class="lg-cnt has-live" id="cnt-PL">4</span>
+    </div>
+  </div>
+
+  <!-- ── CENTER: MATCH PANELS ── -->
+  <div class="matches-col">
+
+    <!-- ALL -->
+    <div class="league-panel active" id="panel-ALL">
+
+      <!-- PREMIER LEAGUE -->
+      <div class="league-block">
+        <div class="league-head">
+          <span class="lh-flag">🏴󠁧󠁢󠁥󠁮󠁧󠁿</span>
+          <span class="lh-name">Premier League</span>
+          <span class="lh-badge">PL</span>
+          <span class="lh-live"><div class="live-dot"></div>3 Live</span>
+        </div>
+        <!-- Man City vs Arsenal -->
+        <div class="match-row is-live is-hot">
+          <div class="m-time"><div class="mt-min" id="mt-1">83'</div><div class="mt-dot"></div></div>
+          <div class="m-team">
+            <img class="tlogo" src="https://crests.football-data.org/65.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt="">
+            <div class="tlogo-fb" style="display:none">MCI</div>
+            <span class="tname winning">Man City</span>
+          </div>
+          <div class="m-score"><span class="sc live" id="sc-1h">2</span><span class="sc-sep">–</span><span class="sc live" id="sc-1a">1</span></div>
+          <div class="m-team away">
+            <span class="tname">Arsenal</span>
+            <img class="tlogo" src="https://crests.football-data.org/57.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt="">
+            <div class="tlogo-fb" style="display:none">ARS</div>
+          </div>
+          <div class="m-meta"><span class="stag st-hot">🔥 Critical</span><div class="mom-bar"><div class="mom-fill mom-hot" style="width:42%"></div></div><span class="mom-sub">ARS pressing</span></div>
+        </div>
+        <!-- Liverpool vs Chelsea -->
+        <div class="match-row is-live">
+          <div class="m-time"><div class="mt-min" id="mt-2">61'</div><div class="mt-dot"></div></div>
+          <div class="m-team">
+            <img class="tlogo" src="https://crests.football-data.org/64.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt="">
+            <div class="tlogo-fb" style="display:none">LIV</div>
+            <span class="tname">Liverpool</span>
+          </div>
+          <div class="m-score"><span class="sc live" id="sc-2h">1</span><span class="sc-sep">–</span><span class="sc live" id="sc-2a">1</span></div>
+          <div class="m-team away">
+            <span class="tname">Chelsea</span>
+            <img class="tlogo" src="https://crests.football-data.org/61.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt="">
+            <div class="tlogo-fb" style="display:none">CHE</div>
+          </div>
+          <div class="m-meta"><span class="stag st-tense">⚡ Tense</span><div class="mom-bar"><div class="mom-fill mom-home" style="width:55%"></div></div><span class="mom-sub">LIV leading</span></div>
+        </div>
+        <!-- Spurs vs Man Utd -->
+        <div class="match-row is-live">
+          <div class="m-time"><div class="mt-min" id="mt-3">44'</div><div class="mt-dot"></div></div>
+          <div class="m-team">
+            <img class="tlogo" src="https://crests.football-data.org/73.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt="">
+            <div class="tlogo-fb" style="display:none">TOT</div>
+            <span class="tname">Spurs</span>
+          </div>
+          <div class="m-score"><span class="sc live" id="sc-3h">0</span><span class="sc-sep">–</span><span class="sc live" id="sc-3a">0</span></div>
+          <div class="m-team away">
+            <span class="tname">Man Utd</span>
+            <img class="tlogo" src="https://crests.football-data.org/66.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt="">
+            <div class="tlogo-fb" style="display:none">MUN</div>
+          </div>
+          <div class="m-meta"><span class="stag st-calm">📊 Calm</span><div class="mom-bar"><div class="mom-fill mom-home" style="width:50%"></div></div><span class="mom-sub">Balanced</span></div>
+        </div>
+        <!-- Everton vs Newcastle -->
+        <div class="match-row">
+          <div class="m-time"><div class="mt-min sched">20:45</div><div class="mt-status">Today</div></div>
+          <div class="m-team">
+            <img class="tlogo" src="https://crests.football-data.org/62.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt="">
+            <div class="tlogo-fb" style="display:none">EVE</div>
+            <span class="tname">Everton</span>
+          </div>
+          <div class="m-score"><span class="vs-txt">vs</span></div>
+          <div class="m-team away">
+            <span class="tname">Newcastle</span>
+            <img class="tlogo" src="https://crests.football-data.org/67.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt="">
+            <div class="tlogo-fb" style="display:none">NEW</div>
+          </div>
+          <div class="m-meta"><span class="stag st-sched">Scheduled</span></div>
+        </div>
+      </div>
+
+      <!-- CHAMPIONS LEAGUE -->
+      <div class="league-block">
+        <div class="league-head">
+          <span class="lh-flag">🏆</span><span class="lh-name">UEFA Champions League</span>
+          <span class="lh-badge">CL</span>
+          <span class="lh-live"><div class="live-dot"></div>2 Live</span>
+        </div>
+        <div class="match-row is-live is-hot">
+          <div class="m-time"><div class="mt-min" id="mt-5">71'</div><div class="mt-dot"></div></div>
+          <div class="m-team">
+            <img class="tlogo" src="https://crests.football-data.org/86.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt="">
+            <div class="tlogo-fb" style="display:none">RMA</div>
+            <span class="tname winning">Real Madrid</span>
+          </div>
+          <div class="m-score"><span class="sc live" id="sc-5h">3</span><span class="sc-sep">–</span><span class="sc live" id="sc-5a">0</span></div>
+          <div class="m-team away">
+            <span class="tname">Barcelona</span>
+            <img class="tlogo" src="https://crests.football-data.org/81.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt="">
+            <div class="tlogo-fb" style="display:none">BAR</div>
+          </div>
+          <div class="m-meta"><span class="stag st-hot">🔥 Critical</span><div class="mom-bar"><div class="mom-fill mom-home" style="width:68%"></div></div><span class="mom-sub">RMA dominating</span></div>
+        </div>
+        <div class="match-row is-live">
+          <div class="m-time"><div class="mt-min" id="mt-6">34'</div><div class="mt-dot"></div></div>
+          <div class="m-team">
+            <img class="tlogo" src="https://crests.football-data.org/524.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt="">
+            <div class="tlogo-fb" style="display:none">PSG</div>
+            <span class="tname">PSG</span>
+          </div>
+          <div class="m-score"><span class="sc live" id="sc-6h">1</span><span class="sc-sep">–</span><span class="sc live" id="sc-6a">2</span></div>
+          <div class="m-team away">
+            <span class="tname winning">Bayern</span>
+            <img class="tlogo" src="https://crests.football-data.org/5.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt="">
+            <div class="tlogo-fb" style="display:none">BAY</div>
+          </div>
+          <div class="m-meta"><span class="stag st-tense">⚡ Tense</span><div class="mom-bar"><div class="mom-fill mom-home" style="width:40%"></div></div><span class="mom-sub">BAY surging</span></div>
+        </div>
+        <div class="match-row">
+          <div class="m-time"><div class="mt-min ft">FT</div></div>
+          <div class="m-team">
+            <img class="tlogo" src="https://crests.football-data.org/108.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt="">
+            <div class="tlogo-fb" style="display:none">INT</div>
+            <span class="tname winning">Inter</span>
+          </div>
+          <div class="m-score"><span class="sc">2</span><span class="sc-sep">–</span><span class="sc">0</span></div>
+          <div class="m-team away">
+            <span class="tname">AC Milan</span>
+            <img class="tlogo" src="https://crests.football-data.org/98.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt="">
+            <div class="tlogo-fb" style="display:none">MIL</div>
+          </div>
+          <div class="m-meta"><span class="stag st-end">Finished</span></div>
+        </div>
+      </div>
+
+      <!-- SERIE A -->
+      <div class="league-block">
+        <div class="league-head"><span class="lh-flag">🇮🇹</span><span class="lh-name">Serie A</span><span class="lh-badge">SA</span><span class="lh-live"><div class="live-dot"></div>1 Live</span></div>
+        <div class="match-row is-live">
+          <div class="m-time"><div class="mt-min" id="mt-8">67'</div><div class="mt-dot"></div></div>
+          <div class="m-team"><img class="tlogo" src="https://crests.football-data.org/109.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">JUV</div><span class="tname winning">Juventus</span></div>
+          <div class="m-score"><span class="sc live" id="sc-8h">1</span><span class="sc-sep">–</span><span class="sc live" id="sc-8a">0</span></div>
+          <div class="m-team away"><span class="tname">Napoli</span><img class="tlogo" src="https://crests.football-data.org/113.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">NAP</div></div>
+          <div class="m-meta"><span class="stag st-tense">⚡ Tense</span><div class="mom-bar"><div class="mom-fill mom-home" style="width:58%"></div></div><span class="mom-sub">JUV in control</span></div>
+        </div>
+      </div>
+
+      <!-- BUNDESLIGA -->
+      <div class="league-block">
+        <div class="league-head"><span class="lh-flag">🇩🇪</span><span class="lh-name">Bundesliga</span><span class="lh-badge">BL1</span><span class="lh-live"><div class="live-dot"></div>1 Live</span></div>
+        <div class="match-row is-live">
+          <div class="m-time"><div class="mt-min" id="mt-7">52'</div><div class="mt-dot"></div></div>
+          <div class="m-team"><img class="tlogo" src="https://crests.football-data.org/4.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">BVB</div><span class="tname">Dortmund</span></div>
+          <div class="m-score"><span class="sc live" id="sc-7h">1</span><span class="sc-sep">–</span><span class="sc live" id="sc-7a">1</span></div>
+          <div class="m-team away"><span class="tname">Leverkusen</span><img class="tlogo" src="https://crests.football-data.org/3.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">B04</div></div>
+          <div class="m-meta"><span class="stag st-tense">⚡ Tense</span><div class="mom-bar"><div class="mom-fill mom-home" style="width:48%"></div></div><span class="mom-sub">Balanced</span></div>
+        </div>
+        <div class="match-row">
+          <div class="m-time"><div class="mt-min ft">FT</div></div>
+          <div class="m-team"><img class="tlogo" src="https://crests.football-data.org/5.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">BAY</div><span class="tname winning">Bayern</span></div>
+          <div class="m-score"><span class="sc">3</span><span class="sc-sep">–</span><span class="sc">1</span></div>
+          <div class="m-team away"><span class="tname">Wolfsburg</span><img class="tlogo" src="https://crests.football-data.org/11.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">WOL</div></div>
+          <div class="m-meta"><span class="stag st-end">Finished</span></div>
+        </div>
+      </div>
+
+      <!-- LA LIGA -->
+      <div class="league-block">
+        <div class="league-head"><span class="lh-flag">🇪🇸</span><span class="lh-name">La Liga</span><span class="lh-badge">PD</span></div>
+        <div class="match-row">
+          <div class="m-time"><div class="mt-min ft">FT</div></div>
+          <div class="m-team"><img class="tlogo" src="https://crests.football-data.org/78.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">ATL</div><span class="tname winning">Atlético</span></div>
+          <div class="m-score"><span class="sc">2</span><span class="sc-sep">–</span><span class="sc">1</span></div>
+          <div class="m-team away"><span class="tname">Valencia</span><img class="tlogo" src="https://crests.football-data.org/95.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">VAL</div></div>
+          <div class="m-meta"><span class="stag st-end">Finished</span></div>
+        </div>
+        <div class="match-row">
+          <div class="m-time"><div class="mt-min sched">21:30</div><div class="mt-status">Today</div></div>
+          <div class="m-team"><img class="tlogo" src="https://crests.football-data.org/559.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">SEV</div><span class="tname">Sevilla</span></div>
+          <div class="m-score"><span class="vs-txt">vs</span></div>
+          <div class="m-team away"><span class="tname">Villarreal</span><img class="tlogo" src="https://crests.football-data.org/558.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">VIL</div></div>
+          <div class="m-meta"><span class="stag st-sched">Scheduled</span></div>
+        </div>
+      </div>
+
+      <!-- LIGUE 1 -->
+      <div class="league-block">
+        <div class="league-head"><span class="lh-flag">🇫🇷</span><span class="lh-name">Ligue 1</span><span class="lh-badge">FL1</span></div>
+        <div class="match-row">
+          <div class="m-time"><div class="mt-min ft">FT</div></div>
+          <div class="m-team"><img class="tlogo" src="https://crests.football-data.org/516.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">OM</div><span class="tname winning">Marseille</span></div>
+          <div class="m-score"><span class="sc">2</span><span class="sc-sep">–</span><span class="sc">1</span></div>
+          <div class="m-team away"><span class="tname">Lyon</span><img class="tlogo" src="https://crests.football-data.org/523.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">OL</div></div>
+          <div class="m-meta"><span class="stag st-end">Finished</span></div>
+        </div>
+      </div>
+
+    </div><!-- /panel-ALL -->
+
+    <!-- INDIVIDUAL PANELS (show only that league's matches) -->
+    <div class="league-panel" id="panel-PL">
+      <div class="league-block">
+        <div class="league-head"><span class="lh-flag">🏴󠁧󠁢󠁥󠁮󠁧󠁿</span><span class="lh-name">Premier League</span><span class="lh-badge">PL</span><span class="lh-live"><div class="live-dot"></div>3 Live</span></div>
+        <div class="match-row is-live is-hot"><div class="m-time"><div class="mt-min">83'</div><div class="mt-dot"></div></div><div class="m-team"><img class="tlogo" src="https://crests.football-data.org/65.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">MCI</div><span class="tname winning">Man City</span></div><div class="m-score"><span class="sc live">2</span><span class="sc-sep">–</span><span class="sc live">1</span></div><div class="m-team away"><span class="tname">Arsenal</span><img class="tlogo" src="https://crests.football-data.org/57.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">ARS</div></div><div class="m-meta"><span class="stag st-hot">🔥 Critical</span></div></div>
+        <div class="match-row is-live"><div class="m-time"><div class="mt-min">61'</div><div class="mt-dot"></div></div><div class="m-team"><img class="tlogo" src="https://crests.football-data.org/64.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">LIV</div><span class="tname">Liverpool</span></div><div class="m-score"><span class="sc live">1</span><span class="sc-sep">–</span><span class="sc live">1</span></div><div class="m-team away"><span class="tname">Chelsea</span><img class="tlogo" src="https://crests.football-data.org/61.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">CHE</div></div><div class="m-meta"><span class="stag st-tense">⚡ Tense</span></div></div>
+        <div class="match-row is-live"><div class="m-time"><div class="mt-min">44'</div><div class="mt-dot"></div></div><div class="m-team"><img class="tlogo" src="https://crests.football-data.org/73.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">TOT</div><span class="tname">Spurs</span></div><div class="m-score"><span class="sc live">0</span><span class="sc-sep">–</span><span class="sc live">0</span></div><div class="m-team away"><span class="tname">Man Utd</span><img class="tlogo" src="https://crests.football-data.org/66.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">MUN</div></div><div class="m-meta"><span class="stag st-calm">📊 Calm</span></div></div>
+        <div class="match-row"><div class="m-time"><div class="mt-min sched">20:45</div><div class="mt-status">Today</div></div><div class="m-team"><img class="tlogo" src="https://crests.football-data.org/62.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">EVE</div><span class="tname">Everton</span></div><div class="m-score"><span class="vs-txt">vs</span></div><div class="m-team away"><span class="tname">Newcastle</span><img class="tlogo" src="https://crests.football-data.org/67.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">NEW</div></div><div class="m-meta"><span class="stag st-sched">Scheduled</span></div></div>
+      </div>
+    </div>
+
+    <div class="league-panel" id="panel-CL">
+      <div class="league-block">
+        <div class="league-head"><span class="lh-flag">🏆</span><span class="lh-name">UEFA Champions League</span><span class="lh-badge">CL</span><span class="lh-live"><div class="live-dot"></div>2 Live</span></div>
+        <div class="match-row is-live is-hot"><div class="m-time"><div class="mt-min">71'</div><div class="mt-dot"></div></div><div class="m-team"><img class="tlogo" src="https://crests.football-data.org/86.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">RMA</div><span class="tname winning">Real Madrid</span></div><div class="m-score"><span class="sc live">3</span><span class="sc-sep">–</span><span class="sc live">0</span></div><div class="m-team away"><span class="tname">Barcelona</span><img class="tlogo" src="https://crests.football-data.org/81.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">BAR</div></div><div class="m-meta"><span class="stag st-hot">🔥 Critical</span></div></div>
+        <div class="match-row is-live"><div class="m-time"><div class="mt-min">34'</div><div class="mt-dot"></div></div><div class="m-team"><img class="tlogo" src="https://crests.football-data.org/524.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">PSG</div><span class="tname">PSG</span></div><div class="m-score"><span class="sc live">1</span><span class="sc-sep">–</span><span class="sc live">2</span></div><div class="m-team away"><span class="tname winning">Bayern</span><img class="tlogo" src="https://crests.football-data.org/5.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">BAY</div></div><div class="m-meta"><span class="stag st-tense">⚡ Tense</span></div></div>
+        <div class="match-row"><div class="m-time"><div class="mt-min ft">FT</div></div><div class="m-team"><img class="tlogo" src="https://crests.football-data.org/108.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">INT</div><span class="tname winning">Inter</span></div><div class="m-score"><span class="sc">2</span><span class="sc-sep">–</span><span class="sc">0</span></div><div class="m-team away"><span class="tname">AC Milan</span><img class="tlogo" src="https://crests.football-data.org/98.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">MIL</div></div><div class="m-meta"><span class="stag st-end">Finished</span></div></div>
+      </div>
+    </div>
+
+    <div class="league-panel" id="panel-BL1">
+      <div class="league-block"><div class="league-head"><span class="lh-flag">🇩🇪</span><span class="lh-name">Bundesliga</span><span class="lh-badge">BL1</span><span class="lh-live"><div class="live-dot"></div>1 Live</span></div>
+        <div class="match-row is-live"><div class="m-time"><div class="mt-min">52'</div><div class="mt-dot"></div></div><div class="m-team"><img class="tlogo" src="https://crests.football-data.org/4.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">BVB</div><span class="tname">Dortmund</span></div><div class="m-score"><span class="sc live">1</span><span class="sc-sep">–</span><span class="sc live">1</span></div><div class="m-team away"><span class="tname">Leverkusen</span><img class="tlogo" src="https://crests.football-data.org/3.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">B04</div></div><div class="m-meta"><span class="stag st-tense">⚡ Tense</span></div></div>
+        <div class="match-row"><div class="m-time"><div class="mt-min ft">FT</div></div><div class="m-team"><img class="tlogo" src="https://crests.football-data.org/5.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">BAY</div><span class="tname winning">Bayern</span></div><div class="m-score"><span class="sc">3</span><span class="sc-sep">–</span><span class="sc">1</span></div><div class="m-team away"><span class="tname">Wolfsburg</span><img class="tlogo" src="https://crests.football-data.org/11.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">WOL</div></div><div class="m-meta"><span class="stag st-end">Finished</span></div></div>
+      </div>
+    </div>
+
+    <div class="league-panel" id="panel-SA">
+      <div class="league-block"><div class="league-head"><span class="lh-flag">🇮🇹</span><span class="lh-name">Serie A</span><span class="lh-badge">SA</span><span class="lh-live"><div class="live-dot"></div>1 Live</span></div>
+        <div class="match-row is-live"><div class="m-time"><div class="mt-min">67'</div><div class="mt-dot"></div></div><div class="m-team"><img class="tlogo" src="https://crests.football-data.org/109.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">JUV</div><span class="tname winning">Juventus</span></div><div class="m-score"><span class="sc live">1</span><span class="sc-sep">–</span><span class="sc live">0</span></div><div class="m-team away"><span class="tname">Napoli</span><img class="tlogo" src="https://crests.football-data.org/113.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">NAP</div></div><div class="m-meta"><span class="stag st-tense">⚡ Tense</span></div></div>
+      </div>
+    </div>
+
+    <div class="league-panel" id="panel-PD">
+      <div class="league-block"><div class="league-head"><span class="lh-flag">🇪🇸</span><span class="lh-name">La Liga</span><span class="lh-badge">PD</span></div>
+        <div class="match-row"><div class="m-time"><div class="mt-min ft">FT</div></div><div class="m-team"><img class="tlogo" src="https://crests.football-data.org/78.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">ATL</div><span class="tname winning">Atlético</span></div><div class="m-score"><span class="sc">2</span><span class="sc-sep">–</span><span class="sc">1</span></div><div class="m-team away"><span class="tname">Valencia</span><img class="tlogo" src="https://crests.football-data.org/95.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">VAL</div></div><div class="m-meta"><span class="stag st-end">Finished</span></div></div>
+        <div class="match-row"><div class="m-time"><div class="mt-min sched">21:30</div><div class="mt-status">Today</div></div><div class="m-team"><img class="tlogo" src="https://crests.football-data.org/559.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">SEV</div><span class="tname">Sevilla</span></div><div class="m-score"><span class="vs-txt">vs</span></div><div class="m-team away"><span class="tname">Villarreal</span><img class="tlogo" src="https://crests.football-data.org/558.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">VIL</div></div><div class="m-meta"><span class="stag st-sched">Scheduled</span></div></div>
+      </div>
+    </div>
+
+    <div class="league-panel" id="panel-FL1">
+      <div class="league-block"><div class="league-head"><span class="lh-flag">🇫🇷</span><span class="lh-name">Ligue 1</span><span class="lh-badge">FL1</span></div>
+        <div class="match-row"><div class="m-time"><div class="mt-min ft">FT</div></div><div class="m-team"><img class="tlogo" src="https://crests.football-data.org/516.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">OM</div><span class="tname winning">Marseille</span></div><div class="m-score"><span class="sc">2</span><span class="sc-sep">–</span><span class="sc">1</span></div><div class="m-team away"><span class="tname">Lyon</span><img class="tlogo" src="https://crests.football-data.org/523.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="tlogo-fb" style="display:none">OL</div></div><div class="m-meta"><span class="stag st-end">Finished</span></div></div>
+      </div>
+    </div>
+
+    <!-- Empty panels -->
+    <div class="league-panel" id="panel-WC"><div class="empty-state"><div class="empty-icon">🌍</div><div class="empty-title">No FIFA World Cup matches today</div><div class="empty-sub">Next tournament: 2026</div></div></div>
+    <div class="league-panel" id="panel-DED"><div class="empty-state"><div class="empty-icon">🇳🇱</div><div class="empty-title">No Eredivisie matches right now</div><div class="empty-sub">Check the fixtures tab for upcoming games</div></div></div>
+    <div class="league-panel" id="panel-BSA"><div class="empty-state"><div class="empty-icon">🇧🇷</div><div class="empty-title">No Brasileirão matches right now</div><div class="empty-sub">Evening kick-offs expected</div></div></div>
+    <div class="league-panel" id="panel-ELC"><div class="empty-state"><div class="empty-icon">🏴󠁧󠁢󠁥󠁮󠁧󠁿</div><div class="empty-title">No Championship matches right now</div><div class="empty-sub">Check the fixtures tab for upcoming games</div></div></div>
+    <div class="league-panel" id="panel-PPL"><div class="empty-state"><div class="empty-icon">🇵🇹</div><div class="empty-title">No Primeira Liga matches right now</div><div class="empty-sub">Check the fixtures tab for upcoming games</div></div></div>
+    <div class="league-panel" id="panel-EC"><div class="empty-state"><div class="empty-icon">🇪🇺</div><div class="empty-title">No Euro Championship matches</div><div class="empty-sub">Next tournament: 2028</div></div></div>
+
+  </div><!-- /matches-col -->
+
+  <!-- RIGHT SIDEBAR -->
+  <div class="right-sidebar">
+    <div class="term">
+      <div class="term-head">
+        <div class="td" style="background:#ff5f57"></div>
+        <div class="td" style="background:#febc2e"></div>
+        <div class="td" style="background:#28c840"></div>
+        <span class="term-lbl">Live Feed</span>
+      </div>
+      <div class="term-body" id="term-body"></div>
+    </div>
+    <div class="widget">
+      <div class="w-head">
+        <span class="w-title">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</span>
+        <a href="#" class="w-link">Full table →</a>
+      </div>
+      <table class="stbl">
+        <tr><th>#</th><th>Team</th><th>P</th><th>W</th><th>Pts</th></tr>
+        <tr><td><span class="pos cl">1</span></td><td><div class="st-team-cell"><img src="https://crests.football-data.org/65.png" onerror="this.style.display='none'" alt=""><span class="st-tname">Man City</span></div></td><td>28</td><td>20</td><td class="pts">63</td></tr>
+        <tr><td><span class="pos cl">2</span></td><td><div class="st-team-cell"><img src="https://crests.football-data.org/57.png" onerror="this.style.display='none'" alt=""><span class="st-tname">Arsenal</span></div></td><td>28</td><td>19</td><td class="pts">60</td></tr>
+        <tr><td><span class="pos cl">3</span></td><td><div class="st-team-cell"><img src="https://crests.football-data.org/64.png" onerror="this.style.display='none'" alt=""><span class="st-tname">Liverpool</span></div></td><td>28</td><td>17</td><td class="pts">55</td></tr>
+        <tr><td><span class="pos cl">4</span></td><td><div class="st-team-cell"><img src="https://crests.football-data.org/61.png" onerror="this.style.display='none'" alt=""><span class="st-tname">Chelsea</span></div></td><td>28</td><td>14</td><td class="pts">47</td></tr>
+        <tr><td><span class="pos">5</span></td><td><div class="st-team-cell"><img src="https://crests.football-data.org/73.png" onerror="this.style.display='none'" alt=""><span class="st-tname">Spurs</span></div></td><td>28</td><td>13</td><td class="pts">43</td></tr>
+        <tr><td><span class="pos">6</span></td><td><div class="st-team-cell"><img src="https://crests.football-data.org/67.png" onerror="this.style.display='none'" alt=""><span class="st-tname">Newcastle</span></div></td><td>28</td><td>12</td><td class="pts">40</td></tr>
+        <tr><td><span class="pos rl">18</span></td><td><div class="st-team-cell"><span class="st-tname">Burnley</span></div></td><td>28</td><td>4</td><td class="pts">14</td></tr>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /page -->
+
+<div class="toast" id="toast"><span id="t-ico">⚽</span><span id="t-msg"></span></div>
+
+<script>
+// CURSOR
+const cur=document.getElementById('cur'),cr=document.getElementById('cur-r');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cur.style.left=mx-5+'px';cur.style.top=my-5+'px';});
+(function loop(){rx+=(mx-rx-15)*.13;ry+=(my-ry-15)*.13;cr.style.left=rx+'px';cr.style.top=ry+'px';requestAnimationFrame(loop);})();
+document.addEventListener('click',e=>{const r=document.createElement('div');r.className='ripple';r.style.left=e.clientX+'px';r.style.top=e.clientY+'px';document.body.appendChild(r);setTimeout(()=>r.remove(),500);});
+document.querySelectorAll('.match-row,.lg-btn,.stbl tr').forEach(el=>{
+  el.addEventListener('mouseenter',()=>{cur.style.transform='scale(1.6)';});
+  el.addEventListener('mouseleave',()=>{cur.style.transform='scale(1)';});
+});
+
+// AUDIO
+const AC=new(window.AudioContext||window.webkitAudioContext)();
+function snd(t){try{const o=AC.createOscillator(),g=AC.createGain();o.connect(g);g.connect(AC.destination);if(t==='tick'){o.type='sine';o.frequency.value=660;g.gain.setValueAtTime(.05,AC.currentTime);g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+.04);o.start();o.stop(AC.currentTime+.04);}else if(t==='switch'){o.type='sine';o.frequency.setValueAtTime(440,AC.currentTime);o.frequency.exponentialRampToValueAtTime(660,AC.currentTime+.08);g.gain.setValueAtTime(.1,AC.currentTime);g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+.1);o.start();o.stop(AC.currentTime+.1);}else if(t==='goal'){const b=AC.createBuffer(1,AC.sampleRate*.35,AC.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*(1-i/d.length)*.5;const s=AC.createBufferSource();s.buffer=b;const f=AC.createBiquadFilter();f.type='bandpass';f.frequency.value=500;const gg=AC.createGain();gg.gain.value=.35;s.connect(f);f.connect(gg);gg.connect(AC.destination);s.start();const w=AC.createOscillator(),wg=AC.createGain();w.type='sine';w.frequency.setValueAtTime(1100,AC.currentTime);w.frequency.exponentialRampToValueAtTime(1500,AC.currentTime+.12);wg.gain.setValueAtTime(.3,AC.currentTime);wg.gain.exponentialRampToValueAtTime(.001,AC.currentTime+.3);w.connect(wg);wg.connect(AC.destination);w.start();w.stop(AC.currentTime+.3);}}catch(e){}}
+document.querySelectorAll('.match-row').forEach(el=>el.addEventListener('mouseenter',()=>snd('tick')));
+
+// LEAGUE SWITCHER
+document.querySelectorAll('.lg-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.lg-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.league-panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    const panel=document.getElementById('panel-'+btn.dataset.panel);
+    if(panel)panel.classList.add('active');
+    snd('switch');
+  });
+  btn.addEventListener('mouseenter',()=>snd('tick'));
+});
+
+// TOAST
+function toast(msg,ico='⚽'){document.getElementById('t-msg').textContent=msg;document.getElementById('t-ico').textContent=ico;const t=document.getElementById('toast');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);}
+
+// TICKER
+const tickData=[
+  {h:'Man City',a:'Arsenal',sh:2,sa:1,min:"83'",live:true},
+  {h:'Liverpool',a:'Chelsea',sh:1,sa:1,min:"61'",live:true},
+  {h:'Real Madrid',a:'Barcelona',sh:3,sa:0,min:"71'",live:true},
+  {h:'PSG',a:'Bayern',sh:1,sa:2,min:"34'",live:true},
+  {h:'Dortmund',a:'Leverkusen',sh:1,sa:1,min:"52'",live:true},
+  {h:'Juventus',a:'Napoli',sh:1,sa:0,min:"67'",live:true},
+  {h:'Inter',a:'AC Milan',sh:2,sa:0,min:'FT',live:false},
+  {h:'Marseille',a:'Lyon',sh:2,sa:1,min:'FT',live:false},
+];
+document.getElementById('ticker').innerHTML=[...tickData,...tickData].map(d=>
+  `<span class="ti"><span class="ti-team">${d.h}</span><span class="ti-score">${d.sh}–${d.sa}</span><span class="ti-team">${d.a}</span><span class="${d.live?'ti-live':'ti-ft'}">${d.min}</span><span class="ti-sep">|</span></span>`
+).join('');
+
+// TERMINAL
+const termEvents=[
+  {min:"83'",type:'GOAL',cls:'tb-goal',txt:'Haaland scores! Man City 2–1'},
+  {min:"82'",type:'YELLOW',cls:'tb-card',txt:'White booked (Arsenal)'},
+  {min:"79'",type:'SUB',cls:'tb-sub',txt:'Bellingham on (Real Madrid)'},
+  {min:"71'",type:'GOAL',cls:'tb-goal',txt:'Vinícius Jr! Real Madrid 3–0'},
+  {min:"67'",type:'GOAL',cls:'tb-goal',txt:'Vlahović! Juventus 1–0 Napoli'},
+  {min:"67'",type:'RED',cls:'tb-card',txt:'Araujo off (Barcelona)'},
+  {min:"61'",type:'SUB',cls:'tb-sub',txt:'Salah comes on (Liverpool)'},
+  {min:"58'",type:'GOAL',cls:'tb-goal',txt:'Palmer! Chelsea 1–1 Liverpool'},
+  {min:"52'",type:'GOAL',cls:'tb-goal',txt:'Adeyemi! Dortmund 1–1'},
+  {min:"44'",type:'PEN',cls:'tb-pen',txt:'Penalty – Man City vs Arsenal'},
+];
+document.getElementById('term-body').innerHTML=termEvents.map(e=>
+  `<div class="t-row"><span class="t-min">${e.min}</span><span class="t-badge ${e.cls}">${e.type}</span><span class="t-txt">${e.txt}</span></div>`
+).join('');
+
+// LIVE TIMES
+const times={'mt-1':83,'mt-2':61,'mt-3':44,'mt-5':71,'mt-6':34,'mt-7':52,'mt-8':67};
+setInterval(()=>{Object.keys(times).forEach(id=>{if(times[id]<90)times[id]++;const el=document.getElementById(id);if(el)el.textContent=times[id]+"'";});},5000);
+
+// RANDOM GOALS
+const goalDefs=[['sc-1h','sc-1a','Man City','Arsenal'],['sc-2h','sc-2a','Liverpool','Chelsea'],['sc-5h','sc-5a','Real Madrid','Barcelona'],['sc-6h','sc-6a','PSG','Bayern'],['sc-7h','sc-7a','Dortmund','Leverkusen'],['sc-8h','sc-8a','Juventus','Napoli']];
+let gc=54;
+function randGoal(){
+  const g=goalDefs[Math.floor(Math.random()*goalDefs.length)];
+  const side=Math.random()<.5?0:1;
+  const el=document.getElementById(g[side]);
+  if(el){el.textContent=parseInt(el.textContent)+1;el.classList.add('sc-pop');setTimeout(()=>el.classList.remove('sc-pop'),900);gc++;document.getElementById('hdr-goals').textContent=gc;snd('goal');toast(`⚽ GOAL! ${g[2+side]} scores!`);}
+  // add to feed
+  const body=document.getElementById('term-body');
+  const div=document.createElement('div');div.className='t-row';
+  div.innerHTML=`<span class="t-min">LIVE</span><span class="t-badge tb-goal">GOAL</span><span class="t-txt">${g[2+side]} scores!</span>`;
+  body.insertBefore(div,body.firstChild);
+  setTimeout(randGoal,20000+Math.random()*22000);
+}
+setTimeout(randGoal,10000);
+
+// NAV
+document.querySelectorAll('nav a').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();document.querySelectorAll('nav a').forEach(x=>x.classList.remove('active'));a.classList.add('active');}));
+</script>
+</body>
+</html>
